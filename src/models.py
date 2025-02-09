@@ -7,8 +7,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(80), nullable=False)
-    favorites = db.relationships("Favorite", backref="user_favorites")
+    password_hash = db.Column(db.String(255), nullable=False)
+    favorites = db.relationship("Favorite", backref="user", cascade="all, delete-orphan")
 
     def __init__(self, username, email, password):
         self.username = username
@@ -16,7 +16,7 @@ class User(db.Model):
         self.set_password(password)
         db.session.add(self)
         try:
-            db.session.commit
+            db.session.commit()
         except Exception as error:
             db.session.rollback()
             raise Exception(error.args)
@@ -42,14 +42,14 @@ class Character(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(250), nullable=False)
     description = db.Column(db.String(250))
-    favorites = db.relationship("Favorite", backref='character')
+    favorites = db.relationship("Favorite", backref='character', cascade="all, delete-orphan")
 
     def __init__(self, name, description=None):
         self.name = name
         self.description = description
         db.session.add(self)
         try:
-            db.session.commit
+            db.session.commit()
         except Exception as error:
             db.session.rollback()
             raise Exception (error.args)
@@ -65,14 +65,14 @@ class Planet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(250), nullable=False)
     description = db.Column(db.String(250))
-    favorites = db.relationship("Favorite", backref='planet')
+    favorites = db.relationship("Favorite", backref='planet', cascade="all, delete-orphan")
 
     def __init__(self, name, description=None):
         self.name = name
         self.description = description
         db.session.add(self)
         try:
-            db.session.commit
+            db.session.commit()
         except Exception as error:
             db.session.rollback()
             raise Exception (error.args)
@@ -87,5 +87,32 @@ class Planet(db.Model):
 class Favorite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    character_id = db.Column(db.Integer, db.ForeingKey('characer.id'), nullable=True)
-    planet_id = db.Column(db.Integer, db.ForeingKey('planet.id'), nullable=True)
+    character_id = db.Column(db.Integer, db.ForeignKey('character.id'), nullable=True)
+    planet_id = db.Column(db.Integer, db.ForeignKey('planet.id'), nullable=True)
+
+    def __init__(self, user_id, character_id=None, planet_id=None):
+        if character_id is not None and planet_id is not None:
+            raise ValueError("A favorite can only have either a character or a planet, not both.")
+        if character_id is None and planet_id is None:
+            raise ValueError("A favorite must have either a character or a planet.")
+        self.user_id = user_id
+        self.character_id = character_id
+        self.planet_id = planet_id
+        db.session.add(self)
+        try:
+            db.session.commit()
+        except Exception as error:
+            db.session.rollback()
+            raise Exception(error.args)
+
+    def serialize(self):
+        item_id = self.character_id if self.character_id else self.planet_id
+        item_name = self.character.name if self.character else (self.planet.name if self.planet else None)
+        item_type = "character" if self.character_id else "planet"
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'item_id': item_id,
+            'item_name': item_name,
+            'item_type': item_type
+        }
