@@ -8,6 +8,7 @@ class User(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(80), nullable=False)
+    favorites = db.relationships("Favorite", backref="user_favorites")
 
     def __init__(self, username, email, password):
         self.username = username
@@ -34,12 +35,14 @@ class User(db.Model):
             "id": self.id,
             "username": self.username,
             "email": self.email,
+            "favorites": [favorite.serialize() for favorite in self.favorites]
         }
     
 class Character(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(250), nullable=False)
     description = db.Column(db.String(250))
+    favorites = db.relationship("Favorite", backref='character')
 
     def __init__(self, name, description=None):
         self.name = name
@@ -62,6 +65,7 @@ class Planet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(250), nullable=False)
     description = db.Column(db.String(250))
+    favorites = db.relationship("Favorite", backref='planet')
 
     def __init__(self, name, description=None):
         self.name = name
@@ -79,3 +83,9 @@ class Planet(db.Model):
             "name": self.name,
             "description": self.description
         }
+    
+class Favorite(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    character_id = db.Column(db.Integer, db.ForeingKey('characer.id'), nullable=True)
+    planet_id = db.Column(db.Integer, db.ForeingKey('planet.id'), nullable=True)
