@@ -35,7 +35,7 @@ class User(db.Model):
             "id": self.id,
             "username": self.username,
             "email": self.email,
-            "favorites": [favorite.serialize() for favorite in self.favorites]
+            "favorites": [favorite.serialize() for favorite in self.favorites] if self.favorites else []
         }
     
 class Character(db.Model):
@@ -106,13 +106,14 @@ class Favorite(db.Model):
             raise Exception(error.args)
 
     def serialize(self):
-        item_id = self.character_id if self.character_id else self.planet_id
-        item_name = self.character.name if self.character else (self.planet.name if self.planet else None)
-        item_type = "character" if self.character_id else "planet"
+        item = None
+        if self.character:
+            item = {"id": self.character_id, "name": self.character.name, "type": "character"}
+        elif self.planet:
+            item = {"id": self.planet_id, "name": self.planet.name, "type": "planet"}
+
         return {
-            'id': self.id,
-            'user_id': self.user_id,
-            'item_id': item_id,
-            'item_name': item_name,
-            'item_type': item_type
+            "id": self.id,
+            "user_id": self.user_id,
+            "item": item if item else {"id": None, "name": None, "type": None}
         }
